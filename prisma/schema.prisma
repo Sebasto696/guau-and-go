@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      String   // "client" | "walker"
+  name      String
+  phone     String?
+  avatar    String?
+  createdAt DateTime @default(now())
+
+  clientProfile  ClientProfile?
+  walkerProfile  WalkerProfile?
+  bookingsAsClient Booking[] @relation("ClientBookings")
+}
+
+model ClientProfile {
+  id        String  @id @default(cuid())
+  userId    String  @unique
+  address   String?
+  user      User    @relation(fields: [userId], references: [id])
+  dogs      Dog[]
+}
+
+model Dog {
+  id              String        @id @default(cuid())
+  name            String
+  breed           String
+  age             Int
+  weight          Float
+  notes           String?
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+  bookings        Booking[]
+}
+
+model WalkerProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  bio         String?
+  experience  Int      @default(0)
+  rating      Float    @default(5.0)
+  totalWalks  Int      @default(0)
+  isAvailable Boolean  @default(true)
+  lat         Float    @default(4.6097)
+  lng         Float    @default(-74.0817)
+  user        User     @relation(fields: [userId], references: [id])
+  bookings    Booking[]
+  reviews     Review[]
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  clientId      String
+  walkerId      String
+  dogId         String
+  status        String   @default("pending") // pending | accepted | in_progress | completed | cancelled
+  serviceType   String   // "30min" | "60min" | "full_day"
+  price         Float
+  scheduledAt   DateTime
+  startedAt     DateTime?
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  client    User          @relation("ClientBookings", fields: [clientId], references: [id])
+  walker    WalkerProfile @relation(fields: [walkerId], references: [id])
+  dog       Dog           @relation(fields: [dogId], references: [id])
+  walkPhotos WalkPhoto[]
+  review    Review?
+}
+
+model WalkPhoto {
+  id        String   @id @default(cuid())
+  bookingId String
+  url       String
+  caption   String?
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  walkerId  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  walker    WalkerProfile @relation(fields: [walkerId], references: [id])
+}
