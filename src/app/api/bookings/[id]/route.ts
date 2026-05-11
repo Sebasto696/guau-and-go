@@ -33,6 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const data: Record<string, unknown> = { status };
   if (status === "in_progress") data.startedAt = new Date();
   if (status === "completed") data.completedAt = new Date();
+  if (status === "cancelled") data.completedAt = new Date();
 
   const booking = await prisma.booking.update({
     where: { id },

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Star, Phone, MessageCircle, MapPin, Clock, Camera, ChevronRight, CheckCircle, Navigation } from "lucide-react";
+import { Star, Phone, MessageCircle, MapPin, Clock, Camera, ChevronRight, CheckCircle, Navigation, X } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { SERVICES } from "@/lib/constants";
@@ -36,7 +36,7 @@ type Booking = {
   walkPhotos: Array<{ id: string; url: string; caption: string | null; createdAt: string }>;
 };
 
-type FlowStep = "locating" | "searching" | "found" | "arriving" | "walking" | "completed";
+type FlowStep = "locating" | "searching" | "found" | "arriving" | "walking" | "completed" | "cancelled";
 
 function elapsed(startedAt: string | null) {
   if (!startedAt) return "00:00";
@@ -80,6 +80,10 @@ export default function BookingFlowPage() {
         const b: Booking = data.booking;
         setBooking(b);
 
+        if (b.status === "cancelled") {
+          setStep("cancelled");
+          return;
+        }
         if (b.status === "completed") {
           setStep("completed");
           setWalkerPos({ lat: b.walker.lat, lng: b.walker.lng });
@@ -160,6 +164,20 @@ export default function BookingFlowPage() {
       clearInterval(durRef.current!);
     };
   }, [step, booking]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function cancelBooking() {
+    const res = await fetch(`/api/bookings/${bookingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    if (res.ok) {
+      clearInterval(simRef.current!);
+      clearInterval(durRef.current!);
+      setStep("cancelled");
+      toast.info("Recogida cancelada");
+    }
+  }
 
   async function startWalk() {
     const res = await fetch(`/api/bookings/${bookingId}`, {
@@ -263,6 +281,10 @@ export default function BookingFlowPage() {
                   className="w-2 h-2 bg-orange-500 rounded-full" />
               ))}
             </div>
+            <button onClick={cancelBooking}
+              className="text-slate-500 hover:text-slate-300 text-sm underline underline-offset-2 transition-colors">
+              Cancelar recogida
+            </button>
           </motion.div>
         )}
 
@@ -332,11 +354,17 @@ export default function BookingFlowPage() {
               </div>
             </motion.div>
 
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-              className="text-slate-500 text-sm flex items-center gap-2">
-              <Clock size={13} className="text-orange-400" />
-              Tu paseador está en camino...
-            </motion.p>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+              className="flex flex-col items-center gap-3">
+              <p className="text-slate-500 text-sm flex items-center gap-2">
+                <Clock size={13} className="text-orange-400" />
+                Tu paseador está en camino...
+              </p>
+              <button onClick={cancelBooking}
+                className="text-slate-500 hover:text-slate-300 text-sm underline underline-offset-2 transition-colors">
+                Cancelar recogida
+              </button>
+            </motion.div>
           </motion.div>
         )}
 
@@ -419,6 +447,10 @@ export default function BookingFlowPage() {
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-2xl py-6 text-base font-bold gap-2 shadow-lg shadow-orange-500/20">
                 <MapPin size={18} /> Iniciar paseo ahora
               </Button>
+              <button onClick={cancelBooking}
+                className="w-full text-slate-500 hover:text-slate-300 text-sm py-2 transition-colors">
+                Cancelar recogida
+              </button>
             </motion.div>
           </motion.div>
         )}
@@ -555,6 +587,37 @@ export default function BookingFlowPage() {
               <Button onClick={() => router.push("/search")} variant="outline"
                 className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 rounded-2xl py-6">
                 Reservar otro paseo
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── CANCELLED ── */}
+        {step === "cancelled" && (
+          <motion.div key="cancelled"
+            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-6">
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+              transition={{ type: "spring", bounce: 0.5, delay: 0.1 }}
+              className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center">
+              <X size={36} className="text-red-400" />
+            </motion.div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">Recogida cancelada</h2>
+              <p className="text-slate-400 text-sm max-w-xs">
+                Cancelaste esta recogida. Puedes pedir otro paseador cuando quieras.
+              </p>
+            </div>
+
+            <div className="w-full max-w-sm space-y-3">
+              <Button onClick={() => router.push("/search")}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-2xl py-6 font-bold gap-2">
+                🐕 Pedir otro paseador
+              </Button>
+              <Button onClick={() => router.push("/dashboard")} variant="outline"
+                className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 rounded-2xl py-6">
+                Volver al inicio
               </Button>
             </div>
           </motion.div>
