@@ -3,7 +3,7 @@ export const SERVICES = [
     id: "individual",
     label: "Plan Individual",
     description: "1 paseo de 1 hora con grupo de 4 perritos",
-    price: 30000,
+    price: 22000,
     walks: 1,
     duration: "1 hora",
     discount: 0,
